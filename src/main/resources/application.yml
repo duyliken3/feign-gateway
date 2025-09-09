@@ -1,0 +1,50 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: feign-gateway
+  cloud:
+    loadbalancer:
+      enabled: true
+
+# Feign client configuration
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 5000
+        readTimeout: 10000
+        loggerLevel: basic
+  httpclient:
+    enabled: true
+    max-connections: 200
+    max-connections-per-route: 50
+
+# Whitelist configuration for allowed services
+gateway:
+  whitelist:
+    enabled: true
+    services:
+      - name: user-service
+        base-url: https://jsonplaceholder.typicode.com
+        endpoints:
+          - /users/**
+          - /users/{id}
+      - name: post-service
+        base-url: https://dummyjson.com
+        endpoints:
+          - /posts/**
+          - /posts/{id}
+      - name: comment-service
+        base-url: https://dummyjson.com
+        endpoints:
+          - /comments/**
+          - /comments/{id}
+
+# Logging configuration
+logging:
+  level:
+    com.example.feigngateway: DEBUG
+    feign: DEBUG
+    org.springframework.cloud.openfeign: DEBUG
