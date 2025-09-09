@@ -307,40 +307,83 @@ Common error scenarios:
 feign_gateway/
 ├── src/main/java/com/example/feigngateway/
 │   ├── aspect/
-│   │   └── RequestLoggingAspect.java          # AOP logging
+│   │   ├── RequestLoggingAspect.java          # AOP logging
+│   │   └── StructuredLoggingAspect.java       # Enhanced structured logging
 │   ├── config/
 │   │   ├── GatewayWhitelistProperties.java    # Configuration properties
-│   │   └── RestTemplateConfig.java            # RestTemplate configuration
+│   │   ├── GatewayProperties.java             # Centralized configuration
+│   │   ├── HttpClientConfig.java              # HTTP client configuration
+│   │   ├── ThreadPoolConfig.java              # Thread pool configuration
+│   │   ├── RestTemplateConfig.java            # RestTemplate configuration
+│   │   └── OpenApiConfig.java                 # OpenAPI configuration
 │   ├── controller/
-│   │   └── SimpleGatewayController.java       # Main gateway controller
+│   │   ├── SimpleGatewayController.java       # Main gateway controller
+│   │   └── PerformanceController.java         # Performance monitoring
+│   ├── dto/
+│   │   ├── ErrorResponse.java                 # Error response DTO
+│   │   ├── GatewayRequest.java                # Gateway request DTO
+│   │   └── ServiceConfigRequest.java          # Service config DTO
 │   ├── exception/
-│   │   ├── GatewayException.java              # Custom exceptions
-│   │   └── GlobalExceptionHandler.java        # Global error handling
+│   │   ├── GatewayException.java              # Base custom exception
+│   │   ├── ValidationException.java           # Validation errors
+│   │   ├── ServiceUnavailableException.java   # Service unavailable
+│   │   ├── RateLimitExceededException.java    # Rate limiting
+│   │   └── GlobalExceptionHandler.java        # Enhanced error handling
 │   ├── service/
 │   │   ├── GatewayService.java                # Core routing logic
+│   │   ├── AsyncGatewayService.java           # Async request processing
+│   │   ├── HttpRequestService.java            # HTTP communication
+│   │   ├── RequestValidationService.java      # Input validation
+│   │   ├── CacheService.java                  # Multi-level caching
+│   │   ├── CircuitBreakerService.java         # Circuit breaker pattern
+│   │   ├── PerformanceMetricsService.java     # Performance monitoring
 │   │   ├── StreamingService.java              # File streaming
 │   │   └── WhitelistService.java              # Security validation
 │   └── FeignGatewayApplication.java           # Main application class
 ├── src/main/resources/
-│   └── application.yml                        # Configuration
-├── src/test/java/                            # Test classes
-├── pom.xml                                   # Maven configuration
+│   └── application.yml                        # Enhanced configuration
+├── src/test/java/                            # Comprehensive test suite
+├── pom.xml                                   # Maven configuration with quality tools
 ├── run.sh                                    # Run script
 ├── test-api.sh                               # Test script
 ├── demo.sh                                   # Demo script
-└── README.md                                 # This file
+├── README.md                                 # This file
+├── CODE_QUALITY_GUIDE.md                     # Code quality guidelines
+├── CODE_QUALITY_SUMMARY.md                   # Quality improvements summary
+├── ARCHITECTURE_V2.md                        # Enhanced architecture
+├── PERFORMANCE_TUNING.md                     # Performance optimization guide
+└── API_DOCUMENTATION.md                      # Enhanced API documentation
 ```
+
+## ✨ **Recent Enhancements (v1.5.0)**
+
+### **Code Quality & Maintainability**
+- **Enhanced Error Handling** - Comprehensive exception hierarchy with structured error responses
+- **Input Validation** - Bean validation with custom DTOs and validation service
+- **Service Layer Refactoring** - Single Responsibility Principle with focused services
+- **Structured Logging** - Correlation IDs, request tracking, and structured log format
+- **Configuration Management** - Centralized configuration with validation and type safety
+
+### **Performance & Scalability**
+- **Advanced Connection Pooling** - Apache HttpClient 5 with optimized connection management
+- **Multi-Level Caching** - Intelligent caching for whitelist validation and service configs
+- **Async Processing** - Non-blocking request processing with CompletableFuture
+- **Circuit Breaker Pattern** - Fault tolerance for downstream services
+- **Performance Metrics** - Real-time monitoring with comprehensive statistics
+
+### **Monitoring & Observability**
+- **Performance Monitoring** - REST endpoints for performance metrics and health checks
+- **Structured Logging** - Correlation IDs, request tracking, and MDC-based logging
+- **Circuit Breaker Monitoring** - Real-time circuit breaker status and statistics
+- **Cache Statistics** - Cache performance and usage monitoring
 
 ## 🚀 Future Enhancements
 
 ### Planned Features
 - **Redis-based Rate Limiting** - Distributed rate limiting
 - **JWT Authentication** - Token-based authentication
-- **Circuit Breaker Pattern** - Fault tolerance
 - **Distributed Tracing** - Request tracing across services
 - **Metrics & Monitoring** - Prometheus/Grafana integration
-- **API Documentation** - OpenAPI/Swagger integration
-- **Caching Strategy** - Response caching with Redis
 - **Health Checks** - Advanced health monitoring
 
 ### Security Improvements
@@ -352,7 +395,7 @@ feign_gateway/
 
 ### Performance Optimizations
 - **HTTP/2 Support** - HTTP/2 protocol support
-- **Connection Pooling** - Optimized connection management
+- **Advanced Caching** - Multi-level caching strategy
 - **Async Processing** - Non-blocking request processing
 - **CDN Integration** - Content delivery network
 

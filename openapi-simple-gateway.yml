@@ -1,0 +1,562 @@
+openapi: 3.0.3
+info:
+  title: Simple Gateway Controller API
+  description: |
+    # Simple Gateway Controller API Documentation
+    
+    This API provides a universal gateway for routing requests to various microservices.
+    
+    ## Architecture
+    
+    The SimpleGatewayController acts as a universal proxy that:
+    - Accepts requests at `/api/execution/{service}/**`
+    - Validates services against a whitelist
+    - Forwards requests to appropriate backend services
+    - Returns responses to clients
+    
+    ## Request Flow
+    
+    ```
+    Client Request → SimpleGatewayController → WhitelistService → GatewayService → RestTemplate → Target Service
+    ```
+    
+    ## Supported HTTP Methods
+    
+    - **GET**: Retrieve data from services
+    - **POST**: Create new resources
+    - **PUT**: Update existing resources
+    - **DELETE**: Remove resources
+    - **PATCH**: Partial updates
+    
+    ## Special Endpoints
+    
+    - **Streaming**: Large file downloads with `Accept: application/octet-stream`
+    - **Multipart**: File uploads with `Content-Type: multipart/form-data`
+    
+  version: 1.4.0
+  contact:
+    name: Ngoc Duy Tran
+    url: https://github.com/duyliken3/feign-gateway
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/execution
+    description: Local development server
+  - url: https://api.example.com/api/execution
+    description: Production server
+
+tags:
+  - name: Health
+    description: Gateway health and status
+  - name: Universal Routing
+    description: Universal request routing to any whitelisted service
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Gateway Health Check
+      description: Check if the gateway is running and healthy
+      operationId: getHealth
+      responses:
+        '200':
+          description: Gateway is healthy and running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Simple Gateway is running"
+        '500':
+          description: Gateway is unhealthy
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Gateway error"
+
+  /{service}/**:
+    get:
+      tags:
+        - Universal Routing
+      summary: Universal GET Request
+      description: |
+        Forward GET requests to any whitelisted service.
+        
+        **Path Structure:**
+        ```
+        /api/execution/{service}/{endpoint-path}
+        ```
+        
+        **Service Examples:**
+        - `user-service` - User management
+        - `post-service` - Post management  
+        - `comment-service` - Comment management
+        
+        **Endpoint Examples:**
+        - `/api/execution/user-service/users` - Get all users
+        - `/api/execution/user-service/users/1` - Get user by ID
+        - `/api/execution/post-service/posts` - Get all posts
+        - `/api/execution/comment-service/comments` - Get all comments
+      operationId: universalGet
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name (must be whitelisted)
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to target service
+          style: form
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+            example:
+              limit: "10"
+              offset: "0"
+              sort: "name"
+      responses:
+        '200':
+          description: Successful response from target service
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Response from target service (varies by service)
+                example:
+                  id: 1
+                  name: "John Doe"
+                  email: "john@example.com"
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Service or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - Universal Routing
+      summary: Universal POST Request
+      description: |
+        Forward POST requests to any whitelisted service.
+        
+        **Use Cases:**
+        - Create new users
+        - Create new posts
+        - Create new comments
+        - Any create operation
+      operationId: universalPost
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name (must be whitelisted)
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to target service
+          style: form
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Request body to forward to target service
+              example:
+                name: "John Doe"
+                email: "john@example.com"
+                phone: "+1-555-123-4567"
+      responses:
+        '200':
+          description: Successful response from target service
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Response from target service
+        '201':
+          description: Resource created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Created resource
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - Universal Routing
+      summary: Universal PUT Request
+      description: |
+        Forward PUT requests to any whitelisted service.
+        
+        **Use Cases:**
+        - Update user information
+        - Update post content
+        - Update comment text
+        - Any full update operation
+      operationId: universalPut
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name (must be whitelisted)
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to target service
+          style: form
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Request body to forward to target service
+              example:
+                id: 1
+                name: "John Doe Updated"
+                email: "john.updated@example.com"
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Updated resource
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - Universal Routing
+      summary: Universal DELETE Request
+      description: |
+        Forward DELETE requests to any whitelisted service.
+        
+        **Use Cases:**
+        - Delete users
+        - Delete posts
+        - Delete comments
+        - Any delete operation
+      operationId: universalDelete
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name (must be whitelisted)
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to target service
+          style: form
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      responses:
+        '200':
+          description: Resource deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Resource deleted successfully"
+        '204':
+          description: Resource deleted successfully (no content)
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - Universal Routing
+      summary: Universal PATCH Request
+      description: |
+        Forward PATCH requests to any whitelisted service.
+        
+        **Use Cases:**
+        - Partial user updates
+        - Partial post updates
+        - Partial comment updates
+        - Any partial update operation
+      operationId: universalPatch
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name (must be whitelisted)
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to target service
+          style: form
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Partial update data
+              example:
+                name: "John Doe Updated"
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                description: Updated resource
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+        - statusCode
+      properties:
+        success:
+          type: boolean
+          example: false
+          description: Indicates if the request was successful
+        message:
+          type: string
+          example: "Access denied: Path not whitelisted"
+          description: Error message describing what went wrong
+        data:
+          type: object
+          nullable: true
+          example: null
+          description: Additional error data (usually null for errors)
+        statusCode:
+          type: integer
+          example: 403
+          description: HTTP status code
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-27T10:30:00Z"
+          description: Timestamp when the error occurred
+
+  examples:
+    UserServiceExample:
+      summary: User Service Example
+      description: Example of routing to user service
+      value:
+        service: user-service
+        endpoint: /users/1
+        method: GET
+        response:
+          id: 1
+          name: "Leanne Graham"
+          username: "Bret"
+          email: "Sincere@april.biz"
+          phone: "1-770-736-8031 x56442"
+          website: "hildegard.org"
+
+    PostServiceExample:
+      summary: Post Service Example
+      description: Example of routing to post service
+      value:
+        service: post-service
+        endpoint: /posts
+        method: GET
+        response:
+          posts:
+            - id: 1
+              title: "Sample Post"
+              body: "This is a sample post content"
+              userId: 1
+              tags: ["technology", "programming"]
+              reactions: 5
+          total: 150
+          skip: 0
+          limit: 30
+
+    CommentServiceExample:
+      summary: Comment Service Example
+      description: Example of routing to comment service
+      value:
+        service: comment-service
+        endpoint: /comments
+        method: GET
+        response:
+          comments:
+            - id: 1
+              body: "This is a great post!"
+              postId: 1
+              user:
+                id: 1
+                username: "commenter1"
+          total: 340
+          skip: 0
+          limit: 30
+
+    ErrorExample:
+      summary: Error Response Example
+      description: Example of error response
+      value:
+        success: false
+        message: "Access denied: Path not whitelisted"
+        data: null
+        statusCode: 403
+        timestamp: "2025-01-27T10:30:00Z"
+
+externalDocs:
+  description: Find more info about Feign Gateway
+  url: https://github.com/duyliken3/feign-gateway

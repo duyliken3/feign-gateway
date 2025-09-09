@@ -1,0 +1,945 @@
+openapi: 3.0.3
+info:
+  title: Feign Gateway API
+  description: |
+    Universal Spring Boot API Gateway with Feign Client and Whitelist Security.
+    
+    This gateway provides a centralized entry point for microservices communication with:
+    - Dynamic service routing based on path patterns
+    - Whitelist-based security validation
+    - Request/response logging and monitoring
+    - Streaming support for large responses
+    - Multipart file upload handling
+    
+    ## How it works
+    
+    All requests follow the pattern: `/api/execution/{service-name}/{endpoint-path}`
+    
+    The gateway automatically:
+    1. Extracts the service name from the URL path
+    2. Validates the service against the whitelist
+    3. Routes the request to the appropriate backend service
+    4. Returns the response to the client
+    
+    ## Supported Services
+    
+    - **user-service**: User management operations
+    - **post-service**: Post and content management
+    - **comment-service**: Comment and discussion features
+    - **payment-service**: Payment processing (future)
+    - **notification-service**: Notification system (future)
+    
+    ## Security
+    
+    The gateway uses whitelist-based security:
+    - Only whitelisted services are accessible
+    - Only whitelisted endpoints are allowed
+    - Path pattern matching with Ant-style patterns
+    
+  version: 1.4.0
+  contact:
+    name: Ngoc Duy Tran
+    url: https://github.com/duyliken3
+    email: duyliken3@github.com
+  license:
+    name: MIT License
+    url: https://opensource.org/licenses/MIT
+  termsOfService: https://github.com/duyliken3/feign-gateway/blob/main/LICENSE
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server
+  - url: https://staging-api.example.com
+    description: Staging server
+
+tags:
+  - name: Gateway
+    description: Gateway health and status endpoints
+  - name: User Service
+    description: User management operations
+  - name: Post Service
+    description: Post and content management
+  - name: Comment Service
+    description: Comment and discussion features
+  - name: File Upload
+    description: File upload and multipart operations
+  - name: Streaming
+    description: Streaming responses for large data
+
+paths:
+  /api/execution/health:
+    get:
+      tags:
+        - Gateway
+      summary: Health Check
+      description: Check the gateway health status
+      operationId: healthCheck
+      responses:
+        '200':
+          description: Gateway is running
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "Simple Gateway is running"
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/execution/{service}/**:
+    get:
+      tags:
+        - User Service
+        - Post Service
+        - Comment Service
+      summary: Universal GET Request
+      description: |
+        Forward GET requests to any whitelisted service.
+        
+        **Service Examples:**
+        - `user-service` - User management
+        - `post-service` - Post management
+        - `comment-service` - Comment management
+        
+        **Path Examples:**
+        - `/api/execution/user-service/users` - Get all users
+        - `/api/execution/user-service/users/1` - Get user by ID
+        - `/api/execution/post-service/posts` - Get all posts
+        - `/api/execution/comment-service/comments` - Get all comments
+      operationId: universalGet
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+            example:
+              limit: "10"
+              offset: "0"
+              sort: "name"
+      responses:
+        '200':
+          description: Successful response from target service
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserListResponse'
+                  - $ref: '#/components/schemas/PostListResponse'
+                  - $ref: '#/components/schemas/CommentListResponse'
+                  - type: object
+                    description: Generic response from target service
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Service or resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      tags:
+        - User Service
+        - Post Service
+        - Comment Service
+      summary: Universal POST Request
+      description: |
+        Forward POST requests to any whitelisted service.
+        
+        **Examples:**
+        - Create a new user
+        - Create a new post
+        - Create a new comment
+      operationId: universalPost
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/CreateUserRequest'
+                - $ref: '#/components/schemas/CreatePostRequest'
+                - $ref: '#/components/schemas/CreateCommentRequest'
+                - type: object
+                  description: Generic request body
+      responses:
+        '200':
+          description: Successful response from target service
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserResponse'
+                  - $ref: '#/components/schemas/PostResponse'
+                  - $ref: '#/components/schemas/CommentResponse'
+                  - type: object
+                    description: Generic response from target service
+        '201':
+          description: Resource created successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserResponse'
+                  - $ref: '#/components/schemas/PostResponse'
+                  - $ref: '#/components/schemas/CommentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      tags:
+        - User Service
+        - Post Service
+        - Comment Service
+      summary: Universal PUT Request
+      description: |
+        Forward PUT requests to any whitelisted service.
+        
+        **Examples:**
+        - Update user information
+        - Update post content
+        - Update comment text
+      operationId: universalPut
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - $ref: '#/components/schemas/UpdateUserRequest'
+                - $ref: '#/components/schemas/UpdatePostRequest'
+                - $ref: '#/components/schemas/UpdateCommentRequest'
+                - type: object
+                  description: Generic request body
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserResponse'
+                  - $ref: '#/components/schemas/PostResponse'
+                  - $ref: '#/components/schemas/CommentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      tags:
+        - User Service
+        - Post Service
+        - Comment Service
+      summary: Universal DELETE Request
+      description: |
+        Forward DELETE requests to any whitelisted service.
+        
+        **Examples:**
+        - Delete a user
+        - Delete a post
+        - Delete a comment
+      operationId: universalDelete
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      responses:
+        '200':
+          description: Resource deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Resource deleted successfully"
+        '204':
+          description: Resource deleted successfully (no content)
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    patch:
+      tags:
+        - User Service
+        - Post Service
+        - Comment Service
+      summary: Universal PATCH Request
+      description: |
+        Forward PATCH requests to any whitelisted service.
+        
+        **Examples:**
+        - Partially update user information
+        - Partially update post content
+        - Partially update comment text
+      operationId: universalPatch
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Partial update data
+              additionalProperties: true
+      responses:
+        '200':
+          description: Resource updated successfully
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/UserResponse'
+                  - $ref: '#/components/schemas/PostResponse'
+                  - $ref: '#/components/schemas/CommentResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Resource not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/execution/{service}/**/stream:
+    get:
+      tags:
+        - Streaming
+      summary: Stream Large Response
+      description: |
+        Stream large responses from any whitelisted service.
+        
+        **Use Cases:**
+        - Large file downloads
+        - Streaming data responses
+        - Real-time data feeds
+        
+        **Headers Required:**
+        - `Accept: application/octet-stream`
+      operationId: streamResponse
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      responses:
+        '200':
+          description: Streaming response
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/execution/{service}/**/upload:
+    post:
+      tags:
+        - File Upload
+      summary: Upload Files (Multipart)
+      description: |
+        Upload files to any whitelisted service using multipart form data.
+        
+        **Use Cases:**
+        - Profile picture uploads
+        - Document uploads
+        - Media file uploads
+        
+        **Content-Type Required:**
+        - `multipart/form-data`
+      operationId: uploadFiles
+      parameters:
+        - name: service
+          in: path
+          required: true
+          description: Target service name
+          schema:
+            type: string
+            enum: [user-service, post-service, comment-service, payment-service, notification-service]
+            example: user-service
+        - name: queryParams
+          in: query
+          required: false
+          description: Query parameters to forward to the target service
+          style: deepObject
+          explode: true
+          schema:
+            type: object
+            additionalProperties:
+              type: string
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+                  description: Files to upload
+                description:
+                  type: string
+                  description: File description
+                metadata:
+                  type: string
+                  description: Additional metadata
+              required:
+                - file
+      responses:
+        '200':
+          description: Files uploaded successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Files uploaded successfully"
+                  files:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        filename:
+                          type: string
+                        size:
+                          type: integer
+                        url:
+                          type: string
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Service not whitelisted or endpoint not allowed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '413':
+          description: File too large
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required:
+        - success
+        - message
+        - statusCode
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "Error message"
+        data:
+          type: object
+          nullable: true
+          example: null
+        statusCode:
+          type: integer
+          example: 400
+        timestamp:
+          type: string
+          format: date-time
+          example: "2025-01-27T10:30:00Z"
+
+    UserResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "John Doe"
+        username:
+          type: string
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        phone:
+          type: string
+          example: "+1-555-123-4567"
+        website:
+          type: string
+          format: uri
+          example: "https://johndoe.com"
+        address:
+          type: object
+          properties:
+            street:
+              type: string
+            city:
+              type: string
+            zipcode:
+              type: string
+            geo:
+              type: object
+              properties:
+                lat:
+                  type: string
+                lng:
+                  type: string
+        company:
+          type: object
+          properties:
+            name:
+              type: string
+            catchPhrase:
+              type: string
+            bs:
+              type: string
+
+    UserListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/UserResponse'
+
+    CreateUserRequest:
+      type: object
+      required:
+        - name
+        - username
+        - email
+      properties:
+        name:
+          type: string
+          example: "John Doe"
+        username:
+          type: string
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "john@example.com"
+        phone:
+          type: string
+          example: "+1-555-123-4567"
+        website:
+          type: string
+          format: uri
+          example: "https://johndoe.com"
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          example: "John Doe Updated"
+        username:
+          type: string
+          example: "johndoe"
+        email:
+          type: string
+          format: email
+          example: "john.updated@example.com"
+        phone:
+          type: string
+          example: "+1-555-123-4567"
+        website:
+          type: string
+          format: uri
+          example: "https://johndoe.com"
+
+    PostResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        title:
+          type: string
+          example: "Sample Post Title"
+        body:
+          type: string
+          example: "This is the content of the post..."
+        userId:
+          type: integer
+          example: 1
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["technology", "programming"]
+        reactions:
+          type: integer
+          example: 5
+
+    PostListResponse:
+      type: object
+      properties:
+        posts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PostResponse'
+        total:
+          type: integer
+          example: 150
+        skip:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 30
+
+    CreatePostRequest:
+      type: object
+      required:
+        - title
+        - body
+        - userId
+      properties:
+        title:
+          type: string
+          example: "Sample Post Title"
+        body:
+          type: string
+          example: "This is the content of the post..."
+        userId:
+          type: integer
+          example: 1
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["technology", "programming"]
+
+    UpdatePostRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          example: "Updated Post Title"
+        body:
+          type: string
+          example: "Updated content of the post..."
+        tags:
+          type: array
+          items:
+            type: string
+          example: ["technology", "programming", "updated"]
+
+    CommentResponse:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        body:
+          type: string
+          example: "This is a great post!"
+        postId:
+          type: integer
+          example: 1
+        user:
+          type: object
+          properties:
+            id:
+              type: integer
+              example: 1
+            username:
+              type: string
+              example: "commenter1"
+
+    CommentListResponse:
+      type: object
+      properties:
+        comments:
+          type: array
+          items:
+            $ref: '#/components/schemas/CommentResponse'
+        total:
+          type: integer
+          example: 340
+        skip:
+          type: integer
+          example: 0
+        limit:
+          type: integer
+          example: 30
+
+    CreateCommentRequest:
+      type: object
+      required:
+        - body
+        - postId
+      properties:
+        body:
+          type: string
+          example: "This is a great post!"
+        postId:
+          type: integer
+          example: 1
+        userId:
+          type: integer
+          example: 1
+
+    UpdateCommentRequest:
+      type: object
+      properties:
+        body:
+          type: string
+          example: "Updated comment text"
+        postId:
+          type: integer
+          example: 1
+
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication (future implementation)
+    
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token for authentication (future implementation)
+
+security:
+  - ApiKeyAuth: []
+  - BearerAuth: []
+
+externalDocs:
+  description: Find more info about Feign Gateway
+  url: https://github.com/duyliken3/feign-gateway

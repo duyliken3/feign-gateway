@@ -1,0 +1,105 @@
+# Test Configuration
+server:
+  port: 0  # Random port for tests
+
+# Gateway Configuration
+gateway:
+  whitelist:
+    enabled: true
+    services:
+      - name: user-service
+        baseUrl: https://jsonplaceholder.typicode.com
+        endpoints:
+          - "/users/**"
+          - "/posts/**"
+      - name: test-service
+        baseUrl: https://httpbin.org
+        endpoints:
+          - "/**"
+
+# Logging Configuration
+logging:
+  level:
+    com.example.feigngateway: DEBUG
+    org.springframework.web: DEBUG
+    org.springframework.test: DEBUG
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Performance Configuration
+gateway:
+  performance:
+    connection:
+      pool:
+        maxTotal: 20
+        maxPerRoute: 10
+        validateAfterInactivity: 2000
+    thread:
+      pool:
+        coreSize: 10
+        maxSize: 50
+        queueCapacity: 100
+    cache:
+      whitelist:
+        enabled: true
+        ttl: 300
+        maxSize: 1000
+    circuitBreaker:
+      enabled: true
+      failureThreshold: 5
+      timeoutDuration: 60000
+      successThreshold: 3
+
+# Monitoring Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+
+# Test-specific configurations
+spring:
+  profiles:
+    active: test
+  test:
+    database:
+      replace: none
+  jpa:
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: jdbc:h2:mem:testdb
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: 
+  h2:
+    console:
+      enabled: true
+
+# Redis Configuration (for testing)
+spring:
+  redis:
+    host: localhost
+    port: 6379
+    database: 0
+    timeout: 2000ms
+    lettuce:
+      pool:
+        max-active: 8
+        max-idle: 8
+        min-idle: 0
+        max-wait: -1ms
+
+# Test Timeouts
+test:
+  timeout:
+    default: 30s
+    performance: 60s
+    integration: 120s

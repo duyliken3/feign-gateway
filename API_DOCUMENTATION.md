@@ -4,6 +4,25 @@
 
 The Feign Gateway provides a universal API gateway that routes requests to various microservices through a single endpoint. All requests are processed through the `/api/execution/{service}/**` pattern.
 
+## 🆕 **New Features (v1.5.0)**
+
+### **Performance Monitoring Endpoints**
+- **`GET /api/performance/stats`** - Overall performance statistics
+- **`GET /api/performance/stats/service/{service}`** - Service-specific metrics
+- **`GET /api/performance/circuit-breakers`** - Circuit breaker status
+- **`GET /api/performance/cache`** - Cache statistics
+- **`GET /api/performance/health`** - Performance health status
+
+### **Enhanced Error Handling**
+- Structured error responses with correlation IDs
+- Comprehensive validation with detailed error messages
+- Proper HTTP status codes for different error types
+
+### **Structured Logging**
+- Correlation IDs for request tracking
+- MDC-based contextual logging
+- Performance metrics integration
+
 ## Base URL
 
 ```

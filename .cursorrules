@@ -1,0 +1,350 @@
+# Feign Gateway - Cursor Rules
+
+## Project Overview
+This is a Spring Boot-based universal API gateway that routes requests to microservices using RestTemplate. The project follows clean architecture principles with comprehensive error handling, validation, caching, and monitoring.
+
+## Code Quality Standards
+
+### General Principles
+- Follow SOLID principles (Single Responsibility, Open/Closed, Liskov Substitution, Interface Segregation, Dependency Inversion)
+- Write clean, readable, and maintainable code
+- Use meaningful names for classes, methods, and variables
+- Keep methods small (< 30 lines) and focused on single responsibility
+- Avoid code duplication (DRY principle)
+- Write comprehensive tests for all public methods
+
+### Java/Spring Boot Standards
+- Use @RequiredArgsConstructor from Lombok for dependency injection
+- Prefer constructor injection over field injection
+- Use @Slf4j for logging instead of manual logger creation
+- Use @Validated for configuration classes
+- Use @Data, @Builder, @NoArgsConstructor, @AllArgsConstructor for DTOs
+- Use @Service, @Component, @Configuration appropriately
+- Use @RestController and @RequestMapping for API endpoints
+
+### Error Handling
+- Use specific exception types instead of generic Exception
+- Extend GatewayException for custom exceptions
+- Include correlation IDs in error responses
+- Use structured error responses with ErrorResponse DTO
+- Log errors with appropriate levels (ERROR for system errors, WARN for business errors)
+- Always include context in error messages
+
+### Validation
+- Use Bean validation annotations (@NotBlank, @Pattern, @Size, etc.)
+- Create custom validation service for complex validation logic
+- Validate all input parameters before processing
+- Use DTOs for request/response objects
+- Include meaningful validation error messages
+
+### Logging
+- Use structured logging with correlation IDs
+- Include MDC context for request tracking
+- Log at appropriate levels:
+  - DEBUG: Detailed debugging information
+  - INFO: Normal request processing
+  - WARN: Validation errors, rate limiting, business warnings
+  - ERROR: System errors, exceptions
+- Use parameterized logging: log.info("Processing request for service: {}", serviceName)
+
+### Configuration
+- Use @ConfigurationProperties for type-safe configuration
+- Validate configuration with Bean validation
+- Provide sensible defaults
+- Document configuration options
+- Use nested configuration classes for organization
+
+### Testing
+- Write unit tests for all service methods
+- Use @ExtendWith(MockitoExtension.class) for unit tests
+- Use @SpringBootTest for integration tests
+- Mock external dependencies
+- Test both success and error scenarios
+- Use meaningful test method names: shouldReturnSuccessWhenValidRequest()
+- Aim for 85%+ test coverage
+
+### Performance
+- Use connection pooling for HTTP clients
+- Implement caching for frequently accessed data
+- Use async processing for non-blocking operations
+- Monitor performance metrics
+- Use circuit breaker pattern for fault tolerance
+
+### Security
+- Validate all input parameters
+- Use whitelist-based access control
+- Sanitize user input
+- Log security-related events
+- Use proper HTTP status codes
+
+## Project Structure
+
+### Package Organization
+- controller/ - REST controllers
+- service/ - Business logic services
+- config/ - Configuration classes
+- dto/ - Data Transfer Objects
+- exception/ - Custom exceptions
+- aspect/ - AOP aspects
+- client/ - External service clients
+
+### Naming Conventions
+- Classes: PascalCase (GatewayService, RequestValidationService)
+- Methods: camelCase (validateGatewayRequest, forwardRequest)
+- Variables: camelCase (serviceName, requestId)
+- Constants: UPPER_SNAKE_CASE (MAX_RETRY_ATTEMPTS)
+- Packages: lowercase (com.example.feigngateway.service)
+
+## API Design
+
+### REST Endpoints
+- Use RESTful conventions
+- Use appropriate HTTP methods (GET, POST, PUT, DELETE, PATCH)
+- Use proper HTTP status codes
+- Include OpenAPI annotations for documentation
+- Use consistent response format
+
+### Request/Response Format
+- Use DTOs for request/response objects
+- Include validation annotations
+- Use structured error responses
+- Include correlation IDs for tracking
+
+## Documentation
+
+### Code Documentation
+- Use JavaDoc for public methods
+- Include parameter descriptions
+- Include return value descriptions
+- Include exception descriptions
+- Use @since for version information
+
+### API Documentation
+- Use OpenAPI annotations
+- Include operation descriptions
+- Include parameter descriptions
+- Include response examples
+- Include error response examples
+
+## Dependencies
+
+### Core Dependencies
+- Spring Boot 3.x
+- Spring Web
+- Spring Boot Actuator
+- Lombok
+- Jackson
+- Validation API
+
+### Quality Dependencies
+- Checkstyle
+- SpotBugs
+- JaCoCo
+- Spring Boot Test
+
+### Monitoring Dependencies
+- Micrometer
+- Logback
+- Spring Boot Actuator
+
+## Common Patterns
+
+### Service Layer Pattern
+```java
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class ExampleService {
+    private final DependencyService dependencyService;
+    
+    public Result processRequest(Request request) {
+        log.debug("Processing request: {}", request);
+        try {
+            validateRequest(request);
+            return dependencyService.process(request);
+        } catch (ValidationException e) {
+            log.warn("Validation failed: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("Unexpected error processing request", e);
+            throw new GatewayException("Processing failed", e);
+        }
+    }
+}
+```
+
+### Exception Handling Pattern
+```java
+@ExceptionHandler(ValidationException.class)
+public ResponseEntity<ErrorResponse> handleValidationException(ValidationException ex) {
+    log.warn("Validation error: {}", ex.getMessage());
+    ErrorResponse errorResponse = ErrorResponse.builder()
+            .message(ex.getMessage())
+            .statusCode(HttpStatus.BAD_REQUEST.value())
+            .data(ex.getValidationErrors())
+            .timestamp(Instant.now().toString())
+            .build();
+    return ResponseEntity.badRequest().body(errorResponse);
+}
+```
+
+### Configuration Pattern
+```java
+@ConfigurationProperties(prefix = "gateway")
+@Validated
+@Data
+public class GatewayProperties {
+    @NotNull
+    private Whitelist whitelist = new Whitelist();
+    
+    @Data
+    public static class Whitelist {
+        private boolean enabled = true;
+        private List<ServiceConfig> services = List.of();
+    }
+}
+```
+
+## Code Review Checklist
+
+### Functionality
+- [ ] Code works as intended
+- [ ] Edge cases are handled
+- [ ] Error scenarios are covered
+- [ ] Performance is acceptable
+
+### Code Quality
+- [ ] Follows SOLID principles
+- [ ] Has appropriate test coverage
+- [ ] Is well-documented
+- [ ] Follows naming conventions
+- [ ] No code duplication
+
+### Security
+- [ ] Input validation is present
+- [ ] No sensitive data exposure
+- [ ] Proper error handling
+- [ ] Security headers included
+
+### Performance
+- [ ] No performance bottlenecks
+- [ ] Appropriate caching
+- [ ] Efficient algorithms
+- [ ] Resource cleanup
+
+## Common Anti-Patterns to Avoid
+
+### Don't Do This
+```java
+// ❌ Generic exception handling
+@ExceptionHandler(Exception.class)
+public ResponseEntity<String> handleException(Exception ex) {
+    return ResponseEntity.status(500).body("Error occurred");
+}
+
+// ❌ Field injection
+@Autowired
+private SomeService someService;
+
+// ❌ Long methods
+public ResponseEntity<Object> handleRequest(String service, String path, String method, Map<String, String> queryParams, Object body, HttpServletRequest request) {
+    // 100+ lines of code
+}
+
+// ❌ No validation
+public ResponseEntity<Object> forwardRequest(String service, String path, Object body) {
+    return restTemplate.postForObject(url, body, Object.class);
+}
+```
+
+### Do This Instead
+```java
+// ✅ Specific exception handling
+@ExceptionHandler(ValidationException.class)
+public ResponseEntity<ErrorResponse> handleValidationException(ValidationException ex) {
+    return ResponseEntity.badRequest().body(ErrorResponse.builder()
+            .message(ex.getMessage())
+            .statusCode(400)
+            .build());
+}
+
+// ✅ Constructor injection
+@RequiredArgsConstructor
+public class SomeService {
+    private final DependencyService dependencyService;
+}
+
+// ✅ Small, focused methods
+public ResponseEntity<Object> handleRequest(GatewayRequest request) {
+    validateRequest(request);
+    return processRequest(request);
+}
+
+// ✅ Comprehensive validation
+public ResponseEntity<Object> forwardRequest(@Valid GatewayRequest request) {
+    validationService.validateRequest(request);
+    return httpService.makeRequest(request);
+}
+```
+
+## Performance Guidelines
+
+### Connection Management
+- Use connection pooling
+- Configure appropriate pool sizes
+- Monitor connection usage
+- Implement connection validation
+
+### Caching
+- Cache frequently accessed data
+- Use appropriate TTL values
+- Monitor cache hit rates
+- Implement cache warming
+
+### Async Processing
+- Use CompletableFuture for non-blocking operations
+- Configure appropriate thread pools
+- Monitor thread pool usage
+- Handle async errors properly
+
+## Monitoring Guidelines
+
+### Logging
+- Use structured logging format
+- Include correlation IDs
+- Log at appropriate levels
+- Monitor log volume
+
+### Metrics
+- Record performance metrics
+- Monitor error rates
+- Track resource usage
+- Set up alerts
+
+### Health Checks
+- Implement health check endpoints
+- Monitor service dependencies
+- Report service status
+- Set up monitoring dashboards
+
+## Security Guidelines
+
+### Input Validation
+- Validate all input parameters
+- Sanitize user input
+- Use whitelist validation
+- Implement rate limiting
+
+### Error Handling
+- Don't expose sensitive information
+- Use generic error messages for users
+- Log detailed errors for debugging
+- Implement proper error responses
+
+### Access Control
+- Use whitelist-based access control
+- Validate service permissions
+- Implement proper authentication
+- Monitor access patterns
+
+Remember: These rules are guidelines to help maintain code quality and consistency. Always consider the specific context and requirements of your changes.
